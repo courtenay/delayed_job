@@ -33,10 +33,11 @@ ActiveRecord::Schema.define do
     table.string   :locked_by
     table.string   :unique_key
     table.string   :server
+    table.string   :queue
     table.timestamps
   end
 
-  add_index :delayed_jobs, [:priority, :run_at], :name => 'delayed_jobs_priority'
+  add_index :delayed_jobs, [:priority, :run_at, :queue], :name => 'delayed_jobs_priority'
 
   create_table :stories, :primary_key => :story_id, :force => true do |table|
     table.string :text
