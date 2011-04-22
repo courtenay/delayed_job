@@ -42,7 +42,7 @@ module Delayed
             scope = scope.scoped(:conditions => ["(site_id != ?) OR (site_id IS NULL)", site.to_i])
           end
       
-          scope = scope.scoped(:conditions => ["queue IN (?)", Worker.queues.split(',')]) if Worker.queues
+          scope = scope.scoped(:conditions => ["queue IN (?)", Worker.queues]) if Worker.queues.any?
 
           ::ActiveRecord::Base.silence do
             scope.by_priority.all(:limit => limit).sort_by { rand() } # to ensure health workers
