@@ -42,8 +42,9 @@ module Delayed
           
           if Delayed::Worker.delay_jobs
             begin
-              self.create(options).tap do |job|
+              self.new(options).tap do |job|
                 job.hook(:enqueue)
+                job.save
               end
             rescue ActiveRecord::StatementInvalid => e
               if e.message =~ /Mysql2::Error: Duplicate entry '.*' for key 'index_delayed_jobs_on_unique_key'/
