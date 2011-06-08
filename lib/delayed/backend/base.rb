@@ -3,8 +3,12 @@ module Delayed
     module Base
       def self.included(base)
         base.extend ClassMethods
+        base.instance_eval do
+          include ActiveSupport::Callbacks
+          define_callbacks :enqueue
+        end
       end
-
+            
       module ClassMethods
         # Add a job to the queue
         def enqueue(*args)
@@ -43,8 +47,10 @@ module Delayed
           if Delayed::Worker.delay_jobs
             begin
               self.new(options).tap do |job|
-                job.hook(:enqueue)
-                job.save
+                job.run_callbacks(:enqueue) do
+                  job.hook(:enqueue)
+                  job.save
+                end
               end
             rescue ActiveRecord::StatementInvalid => e
               if e.message =~ /Mysql2::Error: Duplicate entry '.*' for key 'index_delayed_jobs_on_unique_key'/
