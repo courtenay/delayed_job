@@ -5,7 +5,7 @@ module Delayed
         base.extend ClassMethods
         base.instance_eval do
           include ActiveSupport::Callbacks
-          define_callbacks :enqueue
+          define_callbacks :enqueue, :invoke_job
         end
       end
             
@@ -122,25 +122,18 @@ module Delayed
       end
 
       def invoke_job
-        hook :before
-
-        # Sometimes instance variables need to be reset because of serialization issues
-        if payload_object.respond_to?(:clear_instance_vars!)
-          payload_object.clear_instance_vars!
+        run_callbacks(:invoke_job) do
+          begin
+            hook :before
+            payload_object.perform
+            hook :success
+          rescue Exception => e
+            hook :error, e
+            raise e
+          ensure
+            hook :after
+          end
         end
-
-        # set the delayed_job ID (when supported) so we can do
-        # evil introspection in the payload instance
-        Marginalia::Comment.set_job!(self) if defined?(Marginalia)
-        payload_object.delayed_job_id = id if payload_object.respond_to? :delayed_job_id=
-
-        payload_object.perform
-        hook :success
-      rescue Exception => e
-        hook :error, e
-        raise e
-      ensure
-        hook :after
       end
 
       # Unlock this job (note: not saved to DB)
