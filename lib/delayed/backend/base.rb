@@ -3,10 +3,6 @@ module Delayed
     module Base
       def self.included(base)
         base.extend ClassMethods
-        base.instance_eval do
-          include ActiveSupport::Callbacks
-          define_callbacks :enqueue, :invoke_job
-        end
       end
             
       module ClassMethods
@@ -45,24 +41,10 @@ module Delayed
           options[:unique_key] = unique_key
           
           if Delayed::Worker.delay_jobs
-            begin
-              self.new(options).tap do |job|
-                job.run_callbacks(:enqueue) do
-                  job.hook(:enqueue)
-                  job.save
-                end
-              end
-            rescue ActiveRecord::StatementInvalid => e
-              if e.message =~ /Mysql2::Error: Duplicate entry '.*' for key 'index_delayed_jobs_on_unique_key'/
-                # Do nothing. This is very unlikely, but if a lot of stuff
-                # is saved at the same time, it's possible a job has been
-                # created with the same key between the time we checked and
-                # the time we try to create ours.
-                # We also have an index on this table that normally people don't have
-                # just because of idiots who sent a million emails to us from their
-                # error reporting app
-              else
-                raise e
+            self.new(options).tap do |job|
+              Delayed::Worker.lifecycle.run_callbacks(:enqueue, job) do
+                job.hook(:enqueue)
+                job.save
               end
             end
           else
@@ -122,7 +104,7 @@ module Delayed
       end
 
       def invoke_job
-        run_callbacks(:invoke_job) do
+        Delayed::Worker.lifecycle.run_callbacks(:invoke_job, self) do
           begin
             hook :before
             payload_object.perform
