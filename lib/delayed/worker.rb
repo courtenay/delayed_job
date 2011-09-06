@@ -167,8 +167,8 @@ module Delayed
       end
       say "#{job.name} completed after %.4f" % runtime
       return true  # did work
-    rescue ::Delayed::DeserializationError => error
-      job.last_error = "{#{error.message}\n#{error.backtrace.join('\n')}"
+    rescue DeserializationError => error
+      job.last_error = "{#{error.message}\n#{error.backtrace.join("\n")}"
       failed(job)
     rescue Exception => error
       self.class.lifecycle.run_callbacks(:error, self, job){ handle_failed_job(job, error) }
@@ -209,7 +209,7 @@ module Delayed
   protected
 
     def handle_failed_job(job, error)
-      job.last_error = "{#{error.message}\n#{error.backtrace.join('\n')}"
+      job.last_error = "{#{error.message}\n#{error.backtrace.join("\n")}"
       say "#{job.name} failed with #{error.class.name}: #{error.message} - #{job.attempts} failed attempts", Logger::ERROR
       reschedule(job)
     end
