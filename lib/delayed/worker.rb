@@ -16,7 +16,7 @@ module Delayed
     self.default_priority = 0
     self.delay_jobs = true
     self.queues = []
-    
+
     # Add or remove plugins in this list before the worker is instantiated
     cattr_accessor :plugins
     self.plugins = [Delayed::Plugins::ClearLocks]
@@ -47,7 +47,7 @@ module Delayed
     end
 
     def self.guess_backend
-      warn "[DEPRECATION] guess_backend is deprecated. Please remove it from your code."      
+      warn "[DEPRECATION] guess_backend is deprecated. Please remove it from your code."
     end
 
     def self.before_fork
@@ -57,11 +57,11 @@ module Delayed
           @files_to_reopen << file unless file.closed?
         end
       end
-      
+
       backend.before_fork
     end
-    
-    def self.after_fork      
+
+    def self.after_fork
       # Re-open file handles
       @files_to_reopen.each do |file|
         begin
@@ -70,20 +70,20 @@ module Delayed
         rescue ::Exception
         end
       end
-      
+
       backend.after_fork
     end
-    
+
     def self.lifecycle
       @lifecycle ||= Delayed::Lifecycle.new
     end
 
-    def initialize(options={})
-      @quiet = options.has_key?(:quiet) ? options[:quiet] : true
+    def initialize(options    = {})
+      @quiet                  = options.has_key?(:quiet) ? options[:quiet] : true
       self.class.min_priority = options[:min_priority] if options.has_key?(:min_priority)
       self.class.max_priority = options[:max_priority] if options.has_key?(:max_priority)
-      self.class.sleep_delay = options[:sleep_delay] if options.has_key?(:sleep_delay)
-      self.class.queues = options[:queues] if options.has_key?(:queues)
+      self.class.sleep_delay  = options[:sleep_delay]  if options.has_key?(:sleep_delay)
+      self.class.queues       = options[:queues]       if options.has_key?(:queues)
       self.class.server       = options[:server]       if options.has_key?(:server)
       
       self.plugins.each { |klass| klass.new }
@@ -103,13 +103,13 @@ module Delayed
     def name=(val)
       @name = val
     end
-        
+
     def start
       trap('TERM') { say 'Exiting...'; stop }
       trap('INT')  { say 'Exiting...'; stop }
 
       say "Starting job worker"
-      
+
       self.class.lifecycle.run_callbacks(:execute, self) do
         loop do
           self.class.lifecycle.run_callbacks(:loop, self) do
@@ -129,7 +129,7 @@ module Delayed
               say "#{count} jobs processed at %.4f j/s, %d failed ..." % [count / realtime, result.last]
             end
           end
-        
+
           break if @exit
         end
       end
@@ -138,7 +138,7 @@ module Delayed
     def stop
       @exit = true
     end
-    
+
     # Do num jobs and return stats on success/failure.
     # Exit early if interrupted.
     def work_off(num = 100)
