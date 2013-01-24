@@ -5,11 +5,22 @@ namespace :jobs do
   end
 
   desc "Start a delayed_job worker."
-  task :work => :environment do
-    Delayed::Worker.new(:min_priority => ENV['MIN_PRIORITY'], 
+  task :work => :environment_options do
+    Delayed::Worker.new(@worker_options).start
+  end
+
+  desc "Start a delayed_job worker and exit when the queue is empty."
+  task :workoff => :environment_options do
+    Delayed::Worker.new(@worker_options.merge({:exit_on_empty_queue => true})).start
+  end
+
+  task :environment_options => :environment do
+    @worker_options = {
+      :min_priority => ENV['MIN_PRIORITY'],
       :max_priority => ENV['MAX_PRIORITY'],
-      :quiet => false,
       :queues => (ENV['QUEUES'] || ENV['QUEUE'] || '').split(','),
-      :server => HOSTNAME).start
+      :quiet => false,
+      :server => HOSTNAME
+    }
   end
 end

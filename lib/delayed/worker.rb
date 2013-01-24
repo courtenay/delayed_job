@@ -17,8 +17,8 @@ module Delayed
     DEFAULT_READ_AHEAD       = 5
 
     cattr_accessor :min_priority, :max_priority, :max_attempts, :max_run_time,
-      :default_priority, :sleep_delay, :logger, :delay_jobs, :queues, :server
-      :read_ahead, :plugins, :destroy_failed_jobs
+      :default_priority, :sleep_delay, :logger, :delay_jobs, :queues, :server,
+      :read_ahead, :plugins, :destroy_failed_jobs, :exit_on_empty_queue
 
     # Named queue into which jobs are enqueued by default
     cattr_accessor :default_queue_name
@@ -104,15 +104,13 @@ module Delayed
       @lifecycle ||= Delayed::Lifecycle.new
     end
 
-    def initialize(options    = {})
-      @quiet                  = options.has_key?(:quiet) ? options[:quiet] : true
-      self.class.min_priority = options[:min_priority] if options.has_key?(:min_priority)
-      self.class.max_priority = options[:max_priority] if options.has_key?(:max_priority)
-      self.class.sleep_delay  = options[:sleep_delay]  if options.has_key?(:sleep_delay)
-      self.class.read_ahead   = options[:read_ahead]   if options.has_key?(:read_ahead)
-      self.class.queues       = options[:queues]       if options.has_key?(:queues)
-      self.class.server       = options[:server]       if options.has_key?(:server)
-      
+    def initialize(options={})
+      @quiet = options.has_key?(:quiet) ? options[:quiet] : true
+
+      [:min_priority, :max_priority, :sleep_delay, :read_ahead, :queues, :exit_on_empty_queue, :server].each do |option|
+        self.class.send("#{option}=", options[option]) if options.has_key?(option)
+      end
+
       self.plugins.each { |klass| klass.new }
     end
 
@@ -160,7 +158,13 @@ module Delayed
             break if stop?
 
             if count.zero?
-              sleep(self.class.sleep_delay)
+              if self.class.exit_on_empty_queue
+                say "No more jobs available. Exiting"
+                stop
+                break
+              else
+                sleep(self.class.sleep_delay)
+              end
             else
               say "#{count} jobs processed at %.4f j/s, %d failed ..." % [count / realtime, result.last]
             end
