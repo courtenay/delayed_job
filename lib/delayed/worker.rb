@@ -1,5 +1,6 @@
 require 'timeout'
 require 'active_support/core_ext/numeric/time'
+require 'delayed/performable_method'
 require 'delayed/deserialization_error'
 
 module Delayed
