@@ -6,11 +6,13 @@ end
 
 class SimpleJob
   cattr_accessor :runs; self.runs = 0
+  def unique_key; "id-#{rand}"; end
   def perform; @@runs += 1; end
 end
 
 class ErrorJob
   cattr_accessor :runs; self.runs = 0
+  def unique_key; "id-#{rand}"; end
   def perform; raise 'did not work'; end
 end
 
@@ -21,6 +23,7 @@ class CustomRescheduleJob < Struct.new(:offset)
 end
 
 class LongRunningJob
+  def unique_key; "id-#{rand}"; end
   def perform; sleep 250; end
 end
 
@@ -31,6 +34,7 @@ end
 
 module M
   class ModuleJob
+    def unique_key; "id-#{rand}"; end
     cattr_accessor :runs; self.runs = 0
     def perform; @@runs += 1; end
   end

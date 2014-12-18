@@ -28,7 +28,7 @@ module Delayed
           # sometimes we create many jobs that do the same thing
           # but may have slightly different signatures. So we override this
           # in those classes to prevent creating dupes.
-          unique_key = options[:payload_object].unique_key
+          unique_key = options[:payload_object].unique_key if options[:payload_object].respond_to?(:unique_key)
           
           # sometimes we try to serialize something weird
           # in instance variables; clear these out too

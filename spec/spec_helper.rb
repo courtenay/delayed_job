@@ -31,6 +31,8 @@ ActiveRecord::Schema.define do
     table.datetime :locked_at
     table.datetime :failed_at
     table.string   :locked_by
+    table.string   :unique_key
+    table.string   :server
     table.timestamps
   end
 
@@ -41,6 +43,16 @@ ActiveRecord::Schema.define do
     table.boolean :scoped, :default => true
   end
 end
+
+module Rails
+  class Cache < Hash
+    def read(key)
+      self[key]
+    end
+  end
+  def self.cache; @cache ||= Cache.new; end
+end
+
 
 # Purely useful for test cases...
 class Story < ActiveRecord::Base

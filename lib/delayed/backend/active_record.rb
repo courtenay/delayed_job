@@ -38,7 +38,7 @@ module Delayed
       
           if site = ENV['DJ_SITE_ONLY']
             scope = scope.scoped(:conditions => ["site_id = ?", site.to_i])
-          elsif site = Rails.cache.read("dj-site-exclude")
+          elsif site = ::Rails.cache.read("dj-site-exclude")
             scope = scope.scoped(:conditions => ["(site_id != ?) OR (site_id IS NULL)", site.to_i])
           end
       
