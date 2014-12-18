@@ -9,6 +9,6 @@ namespace :jobs do
     Delayed::Worker.new(:min_priority => ENV['MIN_PRIORITY'], 
       :max_priority => ENV['MAX_PRIORITY'],
       :quiet => false,
-      :server_id => HOSTNAME).start
+      :server => HOSTNAME).start
   end
 end
