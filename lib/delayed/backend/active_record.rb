@@ -44,9 +44,17 @@ module Delayed
           scope = self.ready_to_run(worker_name, max_run_time)
           scope = scope.scoped(:conditions => ['priority >= ?', Worker.min_priority]) if Worker.min_priority
           scope = scope.scoped(:conditions => ['priority <= ?', Worker.max_priority]) if Worker.max_priority
+          scope = scope.scoped(:conditions => ['server is null OR server = ?', Worker.server_id]) if Worker.server_id
+      
+          if site = ENV['DJ_SITE_ONLY']
+            scope = scope.scoped(:conditions => ["site_id = ?", site.to_i])
+          elsif site = Rails.cache.read("dj-site-exclude")
+            scope = scope.scoped(:conditions => ["(site_id != ?) OR (site_id IS NULL)", site.to_i])
+          end
       
           ::ActiveRecord::Base.silence do
             scope.by_priority.all(:limit => limit)
+              .sort_by { rand() } # to ensure health workers
           end
         end
 

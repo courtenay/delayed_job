@@ -45,11 +45,12 @@ module Delayed
       end
     end
 
-    def initialize(options={})
-      @quiet = options[:quiet]
+    def initialize(options = {})
+      @quiet                  = options[:quiet]
       self.class.min_priority = options[:min_priority] if options.has_key?(:min_priority)
       self.class.max_priority = options[:max_priority] if options.has_key?(:max_priority)
-      self.class.sleep_delay = options[:sleep_delay] if options.has_key?(:sleep_delay)
+      self.class.sleep_delay  = options[:sleep_delay]  if options.has_key?(:sleep_delay)
+      self.class.server_id    = options[:server_id]    if options.has_key?(:server_id)
     end
 
     # Every worker has a unique name which by default is the pid of the process. There are some

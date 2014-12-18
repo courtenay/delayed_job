@@ -15,7 +15,36 @@ module Delayed
     
           priority = args.first || Delayed::Worker.default_priority
           run_at   = args[1]
-          self.create(:payload_object => object, :priority => priority.to_i, :run_at => run_at)
+          
+          # Some jobs must be run on a specific host
+          server   = args[2]
+          
+          # sometimes we create many jobs that do the same thing
+          # but may have slightly different signatures. So we override this
+          # in those classes to prevent creating dupes.
+          unique_key = object.unique_key
+          
+          # sometimes we try to serialize something weird
+          # in instance variables; clear these out too
+          object.clear_instance_vars! if object.respond_to?(:clear_instance_vars!)
+          
+          unless !unique_key.blank? && Job.exists?(:unique_key => unique_key)
+            begin
+              self.create(:payload_object => object, :priority => priority.to_i, :run_at => run_at, :server => server, :unique_key => unique_key)
+            rescue ActiveRecord::StatementInvalid => e
+              if e.message =~ /Mysql2::Error: Duplicate entry '.*' for key 'index_delayed_jobs_on_unique_key'/
+                # Do nothing. This is very unlikely, but if a lot of stuff
+                # is saved at the same time, it's possible a job has been
+                # created with the same key between the time we checked and
+                # the time we try to create ours.
+                # We also have an index on this table that normally people don't have
+                # just because of idiots who sent a million emails to us from their
+                # error reporting app
+              else
+                raise e
+              end
+            end
+          end
         end
 
         def reserve(worker, max_run_time = Worker.max_run_time)
@@ -68,6 +97,16 @@ module Delayed
 
       # Moved into its own method so that new_relic can trace it.
       def invoke_job
+        # Sometimes instance variables need to be reset because of serialization issues
+        if payload_object.respond_to?(:clear_instance_vars!)
+          payload_object.clear_instance_vars!
+        end
+
+        # set the delayed_job ID (when supported) so we can do
+        # evil introspection in the payload instance
+        Marginalia::Comment.set_job!(self) if defined?(Marginalia)
+        payload_object.delayed_job_id = id if payload_object.respond_to? :delayed_job_id=
+
         payload_object.perform
       end
       
@@ -104,9 +143,15 @@ module Delayed
 
         raise DeserializationError,
           'Job failed to load: Unknown handler. Try to manually require the appropriate file.'
-      rescue TypeError, LoadError, NameError, ArgumentError => e
-        raise DeserializationError,
-          "Job failed to load: #{e.message}. Try to manually require the required file."
+
+        # Rescue and rethrow all the important stuff because we have a catchall after that.
+        rescue NoMemoryError, LoadError, NameError, ArgumentError, ScriptError, SignalException, SystemExit => e
+          throw e
+
+        # We have to rescue Exception because Psych throws unknown errors that are not StandardError
+        rescue TypeError, LoadError, NameError, ArgumentError, Exception => e
+          raise DeserializationError,
+            "Job failed to load: #{e.message}. Try to manually require the required file."
       end
 
       # Constantize the object so that ActiveSupport can attempt
