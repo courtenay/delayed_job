@@ -22,16 +22,16 @@ module Delayed
           # sometimes we create many jobs that do the same thing
           # but may have slightly different signatures. So we override this
           # in those classes to prevent creating dupes.
-          unique_key = object.unique_key
+          unique_key = object.unique_key if object.respond_to?(:unique_key)
           
           # sometimes we try to serialize something weird
           # in instance variables; clear these out too
           object.clear_instance_vars! if object.respond_to?(:clear_instance_vars!)
           
-          unless !unique_key.blank? && Job.exists?(:unique_key => unique_key)
+          if unique_key.blank? || ! Job.exists?(:unique_key => unique_key)
             begin
               self.create(:payload_object => object, :priority => priority.to_i, :run_at => run_at, :server => server, :unique_key => unique_key)
-            rescue ActiveRecord::StatementInvalid => e
+            rescue ::ActiveRecord::StatementInvalid => e
               if e.message =~ /Mysql2::Error: Duplicate entry '.*' for key 'index_delayed_jobs_on_unique_key'/
                 # Do nothing. This is very unlikely, but if a lot of stuff
                 # is saved at the same time, it's possible a job has been

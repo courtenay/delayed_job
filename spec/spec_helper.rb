@@ -12,6 +12,15 @@ require 'sample_jobs'
 Delayed::Worker.logger = Logger.new('/tmp/dj.log')
 RAILS_ENV = 'test'
 
+module Rails
+  class Cache < Hash
+    def read(key)
+      self[key]
+    end
+  end
+  def self.cache; @cache ||= Cache.new; end
+end
+
 # determine the available backends
 BACKENDS = []
 Dir.glob("#{File.dirname(__FILE__)}/setup/*.rb") do |backend|
