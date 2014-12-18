@@ -1,5 +1,6 @@
 require 'timeout'
 require 'active_support/core_ext/numeric/time'
+require 'delayed/deserialization_error'
 
 module Delayed
   class Worker
@@ -125,7 +126,7 @@ module Delayed
       end
       say "#{job.name} completed after %.4f" % runtime
       return true  # did work
-    rescue DeserializationError => error
+    rescue ::Delayed::DeserializationError => error
       job.last_error = "{#{error.message}\n#{error.backtrace.join('\n')}"
       failed(job)
     rescue Exception => error
@@ -152,7 +153,7 @@ module Delayed
             say "Running on_permanent_failure hook"
             job.payload_object.on_permanent_failure
         end
-      rescue DeserializationError
+      rescue ::Delayed::DeserializationError
         # do nothing
       end
       
