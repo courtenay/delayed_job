@@ -3,7 +3,7 @@ require 'active_support/core_ext/numeric/time'
 
 module Delayed
   class Worker
-    cattr_accessor :min_priority, :max_priority, :max_attempts, :max_run_time, :default_priority, :sleep_delay, :logger, :server_id
+    cattr_accessor :min_priority, :max_priority, :max_attempts, :max_run_time, :default_priority, :sleep_delay, :logger, :server
     self.sleep_delay = 5
     self.max_attempts = 25
     self.max_run_time = 4.hours
@@ -50,7 +50,7 @@ module Delayed
       self.class.min_priority = options[:min_priority] if options.has_key?(:min_priority)
       self.class.max_priority = options[:max_priority] if options.has_key?(:max_priority)
       self.class.sleep_delay  = options[:sleep_delay]  if options.has_key?(:sleep_delay)
-      self.class.server_id    = options[:server_id]    if options.has_key?(:server_id)
+      self.class.server       = options[:server]       if options.has_key?(:server)
     end
 
     # Every worker has a unique name which by default is the pid of the process. There are some

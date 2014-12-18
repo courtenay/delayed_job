@@ -10,7 +10,7 @@ module Delayed
       @files_to_reopen = []
       @options = {
         :quiet => true,
-        :server_id => HOSTNAME,
+        :server => HOSTNAME,
         :pid_dir => "#{RAILS_ROOT}/tmp/pids"
       }
       
