@@ -4,6 +4,7 @@ require 'active_support/core_ext/class/attribute_accessors'
 require 'active_support/core_ext/kernel'
 require 'active_support/core_ext/enumerable'
 require 'logger'
+require 'delayed/deserialization_error'
 
 module Delayed
   class Worker
@@ -124,7 +125,7 @@ module Delayed
       end
       say "#{job.name} completed after %.4f" % runtime
       return true  # did work
-    rescue DeserializationError => error
+    rescue ::Delayed::DeserializationError => error
       job.last_error = "{#{error.message}\n#{error.backtrace.join('\n')}"
       failed(job)
     rescue Exception => error
