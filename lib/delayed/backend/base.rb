@@ -18,15 +18,45 @@ module Delayed
             warn "[DEPRECATION] Passing multiple arguments to `#enqueue` is deprecated. Pass a hash with :priority and :run_at."
             options[:priority] = args.first || options[:priority]
             options[:run_at]   = args[1]
+            options[:server]   = args[2]
           end
 
           unless options[:payload_object].respond_to?(:perform)
             raise ArgumentError, 'Cannot enqueue items which do not respond to perform'
           end
-
+          
+          # sometimes we create many jobs that do the same thing
+          # but may have slightly different signatures. So we override this
+          # in those classes to prevent creating dupes.
+          unique_key = options[:payload_object].unique_key
+          
+          # sometimes we try to serialize something weird
+          # in instance variables; clear these out too
+          options[:payload_object].clear_instance_vars! if options[:payload_object].respond_to?(:clear_instance_vars!)
+          
+          if ! unique_key.blank? && Job.exists?(:unique_key => unique_key)
+            # do not create job
+            return
+          end
+          options[:unique_key] = unique_key
+          
           if Delayed::Worker.delay_jobs
-            self.create(options).tap do |job|
-              job.hook(:enqueue)
+            begin
+              self.create(options).tap do |job|
+                job.hook(:enqueue)
+              end
+            rescue ActiveRecord::StatementInvalid => e
+              if e.message =~ /Mysql2::Error: Duplicate entry '.*' for key 'index_delayed_jobs_on_unique_key'/
+                # Do nothing. This is very unlikely, but if a lot of stuff
+                # is saved at the same time, it's possible a job has been
+                # created with the same key between the time we checked and
+                # the time we try to create ours.
+                # We also have an index on this table that normally people don't have
+                # just because of idiots who sent a million emails to us from their
+                # error reporting app
+              else
+                raise e
+              end
             end
           else
             Delayed::Job.new(:payload_object => options[:payload_object]).tap do |job|
@@ -86,6 +116,17 @@ module Delayed
 
       def invoke_job
         hook :before
+
+        # Sometimes instance variables need to be reset because of serialization issues
+        if payload_object.respond_to?(:clear_instance_vars!)
+          payload_object.clear_instance_vars!
+        end
+
+        # set the delayed_job ID (when supported) so we can do
+        # evil introspection in the payload instance
+        Marginalia::Comment.set_job!(self) if defined?(Marginalia)
+        payload_object.delayed_job_id = id if payload_object.respond_to? :delayed_job_id=
+
         payload_object.perform
         hook :success
       rescue Exception => e
