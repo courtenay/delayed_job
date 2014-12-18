@@ -43,8 +43,7 @@ module Delayed
           end
       
           ::ActiveRecord::Base.silence do
-            scope.by_priority.all(:limit => limit)
-              .sort_by { rand() } # to ensure health workers
+            scope.by_priority.all(:limit => limit).sort_by { rand() } # to ensure health workers
           end
         end
 
