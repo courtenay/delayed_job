@@ -146,12 +146,15 @@ module Delayed
 
         # Rescue and rethrow all the important stuff because we have a catchall after that.
         rescue NoMemoryError, LoadError, NameError, ArgumentError, ScriptError, SignalException, SystemExit => e
-          throw e
+          if e.to_s =~ /syntax error on line/
+            raise DeserializationError, "Job failed to load: #{e.message}."
+          else
+            throw e
+          end
 
         # We have to rescue Exception because Psych throws unknown errors that are not StandardError
         rescue TypeError, LoadError, NameError, ArgumentError, Exception => e
-          raise DeserializationError,
-            "Job failed to load: #{e.message}. Try to manually require the required file."
+          raise DeserializationError, "Job failed to load: #{e.message}."
       end
 
       # Constantize the object so that ActiveSupport can attempt
