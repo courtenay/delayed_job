@@ -13,7 +13,7 @@ module Delayed
       @options = {
         :quiet => true,
         :server => HOSTNAME,
-        :pid_dir => "#{RAILS_ROOT}/tmp/pids"
+        :pid_dir => "#{Rails.root}/tmp/pids"
       }
 
       @worker_count = 1
